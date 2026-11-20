@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prism & Dispersion of Light — Virtual Physics Lab</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    input[type="range"] {
+      accent-color: #2563eb;
+      cursor: pointer;
+    }
+    .canvas-container {
+      touch-action: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-30 flex min-h-[60px] flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2">
+    <div class="flex items-center gap-3">
+      <div class="flex h-11 w-12 items-center justify-center rounded-xl bg-indigo-50 text-2xl">
+        🌈
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-slate-900">Prism &amp; Dispersion of Light Lab</h1>
+        <p class="text-sm text-slate-500">
+          Class 10 / 12 NCERT Physics — Refraction Through a Glass Prism, VIBGYOR Spectrum &amp; Newton's Recombination
+        </p>
+      </div>
+    </div>
+
+    <!-- MODE SWITCHER & RESET -->
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap rounded-lg border border-slate-200 bg-slate-100 p-1 text-xs font-bold">
+        <button
+          onclick="switchMode('single')"
+          id="mode-single"
+          class="mode-btn rounded-md bg-blue-600 px-3 py-1.5 text-white shadow-sm transition"
+        >
+          1. Single Prism (Dispersion)
+        </button>
+        <button
+          onclick="switchMode('newton')"
+          id="mode-newton"
+          class="mode-btn rounded-md px-3 py-1.5 text-slate-600 hover:text-slate-900 transition"
+        >
+          2. Newton's Double-Prism Recombination
+        </button>
+      </div>
+
+      <button
+        onclick="resetLab()"
+        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+      >
+        ↺ Reset
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN SIMULATION VIEWPORT -->
+  <section class="border-b border-slate-200 bg-white">
+    <div class="flex flex-wrap items-center justify-between gap-3 px-5 pt-4">
+      <div>
+        <h2 id="simTitle" class="font-bold text-blue-700">
+          1. Dispersion of White Light Through a Triangular Glass Prism
+        </h2>
+        <p id="simSubtitle" class="text-xs text-slate-500">
+          Drag the light torch vertically (or adjust Incidence Angle i) to trace exact Snell's Law refraction &amp; VIBGYOR splitting onto the screen
+        </p>
+      </div>
+
+      <!-- VIBGYOR SPECTRUM BADGES -->
+      <div class="flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+        <span class="text-slate-500 mr-1">VIBGYOR:</span>
+        <span class="rounded bg-violet-100 px-2 py-0.5 text-violet-900 border border-violet-300">V (400nm)</span>
+        <span class="rounded bg-indigo-100 px-2 py-0.5 text-indigo-900 border border-indigo-300">I</span>
+        <span class="rounded bg-blue-100 px-2 py-0.5 text-blue-900 border border-blue-300">B</span>
+        <span class="rounded bg-green-100 px-2 py-0.5 text-green-900 border border-green-300">G</span>
+        <span class="rounded bg-yellow-100 px-2 py-0.5 text-yellow-900 border border-yellow-300">Y</span>
+        <span class="rounded bg-orange-100 px-2 py-0.5 text-orange-900 border border-orange-300">O</span>
+        <span class="rounded bg-red-100 px-2 py-0.5 text-red-900 border border-red-300">R (700nm)</span>
+      </div>
+    </div>
+
+    <div class="canvas-container relative overflow-x-auto px-2 py-2">
+      <canvas
+        id="prismCanvas"
+        width="1120"
+        height="420"
+        class="mx-auto block w-full max-w-[1120px] cursor-grab rounded-xl border border-slate-800 bg-slate-950 shadow-inner"
+      ></canvas>
+    </div>
+
+    <!-- QUICK ACTION & DISPLAY BAR -->
+    <div class="mx-4 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div class="flex flex-wrap items-center gap-4 text-xs font-semibold">
+        <label class="flex cursor-pointer items-center gap-2">
+          <input id="chkNormals" type="checkbox" checked class="h-4 w-4 rounded" />
+          <span>Show Surface Normals (N₁, N₂)</span>
+        </label>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input id="chkDeviation" type="checkbox" checked class="h-4 w-4 rounded" />
+          <span>Show Angle of Deviation (δ)</span>
+        </label>
+        <label class="flex cursor-pointer items-center gap-2">
+          <input id="chkScreen" type="checkbox" checked class="h-4 w-4 rounded" />
+          <span>Show White Projection Screen</span>
+        </label>
+      </div>
+
+      <div id="tirWarningBadge" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-900">
+        ✓ Full VIBGYOR Spectrum Projected on Screen (Violet bends most, Red bends least)
+      </div>
+    </div>
+  </section>
+
+  <!-- LOWER DASHBOARD -->
+  <main class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-3">
+    <!-- PARAMETERS -->
+    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 class="mb-4 border-b border-slate-100 pb-3 text-lg font-bold">
+        🎚 Optical &amp; Prism Controls
+      </h2>
+
+      <!-- Light Beam Type -->
+      <div class="mb-4">
+        <label class="mb-1.5 block text-sm font-semibold">Incident Light Source</label>
+        <select id="selectBeamType" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800">
+          <option value="white" selected>☀️ Polychromatic White Light (Dispersion)</option>
+          <option value="red">🔴 Monochromatic Red Laser (λ = 700 nm)</option>
+          <option value="green">🟢 Monochromatic Green Laser (λ = 530 nm)</option>
+          <option value="violet">🟣 Monochromatic Violet Laser (λ = 400 nm)</option>
+        </select>
+      </div>
+
+      <!-- Prism Material Preset -->
+      <div class="mb-4">
+        <label class="mb-1.5 block text-sm font-semibold">Prism Material (Dispersive Medium)</label>
+        <select id="selectMaterial" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800">
+          <option value="crown" selected>Crown Glass (n_red = 1.513, n_violet = 1.532)</option>
+          <option value="flint">Dense Flint Glass (High Dispersion: 1.644 – 1.685)</option>
+          <option value="diamond">Diamond (Extreme Dispersion: 2.407 – 2.465)</option>
+          <option value="water">Water Prism (Low Dispersion: 1.331 – 1.344)</option>
+        </select>
+      </div>
+
+      <!-- Angle of Incidence -->
+      <div class="mb-4">
+        <div class="mb-1.5 flex items-center justify-between">
+          <label class="text-sm font-semibold">Angle of Incidence (i)</label>
+          <span id="valIncidence" class="rounded-md bg-blue-50 px-2 py-1 text-xs font-bold text-blue-700">
+            48°
+          </span>
+        </div>
+        <input id="sliderIncidence" type="range" min="20" max="80" step="1" value="48" class="w-full" />
+        <div class="mt-1 flex justify-between text-xs text-slate-400">
+          <span>20°</span>
+          <span>48° (Near Min δ)</span>
+          <span>80°</span>
+        </div>
+      </div>
+
+      <!-- Prism Apex Angle A -->
+      <div class="mb-2">
+        <div class="mb-1.5 flex items-center justify-between">
+          <label class="text-sm font-semibold">Angle of Prism (A)</label>
+          <span id="valApex" class="rounded-md bg-purple-50 px-2 py-1 text-xs font-bold text-purple-700">
+            60°
+          </span>
+        </div>
+        <input id="sliderApex" type="range" min="30" max="75" step="5" value="60" class="w-full" />
+        <div class="mt-1 flex justify-between text-xs text-slate-400">
+          <span>30° (Thin)</span>
+          <span>60° (Equilateral)</span>
+          <span>75° (Wide)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE OPTICAL READINGS -->
+    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 class="mb-4 border-b border-slate-100 pb-3 text-lg font-bold">
+        ✨ Refraction &amp; Deviation Angles
+      </h2>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p class="text-[10px] font-bold tracking-wide text-slate-500">RED DEVIATION (δ_R)</p>
+          <p id="cardDevRed" class="mt-2 text-2xl font-bold text-red-600">38.2°</p>
+          <p id="cardNRed" class="text-xs font-semibold text-slate-600">n_R = 1.513 (λ = 700 nm)</p>
+          <p class="mt-1 text-[10px] text-slate-500">Fastest in glass → Bends least</p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p class="text-[10px] font-bold tracking-wide text-slate-500">VIOLET DEVIATION (δ_V)</p>
+          <p id="cardDevViolet" class="mt-2 text-2xl font-bold text-violet-700">40.1°</p>
+          <p id="cardNViolet" class="text-xs font-semibold text-slate-600">n_V = 1.532 (λ = 400 nm)</p>
+          <p class="mt-1 text-[10px] text-slate-500">Slowest in glass → Bends most</p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p class="text-[10px] font-bold tracking-wide text-slate-500">ANGULAR DISPERSION (θ)</p>
+          <p id="cardAngDisp" class="mt-2 text-2xl font-bold text-blue-600">1.90°</p>
+          <p class="text-xs font-semibold text-slate-600">θ = δ_V − δ_R</p>
+          <p class="mt-1 text-[10px] text-slate-500">Spectrum spread angle</p>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p class="text-[10px] font-bold tracking-wide text-slate-500">DISPERSIVE POWER (ω)</p>
+          <p id="cardDispPower" class="mt-2 text-2xl font-bold text-emerald-600">0.036</p>
+          <p class="text-xs font-semibold text-slate-600">ω = (n_V − n_R) / (n_Y − 1)</p>
+          <p class="mt-1 text-[10px] text-slate-500">Depends only on material</p>
+        </div>
+      </div>
+
+      <div class="mt-4 rounded-lg bg-indigo-50 p-3 text-xs leading-5 text-indigo-950">
+        <strong>Why Does White Light Split?</strong> Different wavelengths travel at different speeds inside glass (v = c / n). Because <strong>n_Violet &gt; n_Red</strong>, Violet slows down more and bends sharply toward the base of the prism.
+      </div>
+    </section>
+
+    <!-- LIVE EQUATIONS & CAUCHY REFRACTIVE INDEX GRAPH -->
+    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="mb-3 flex items-center justify-between border-b border-slate-100 pb-3">
+        <h2 class="text-lg font-bold">📈 Refractive Index (n) vs Wavelength</h2>
+        <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+          Cauchy's Curve
+        </span>
+      </div>
+
+      <canvas
+        id="cauchyGraphCanvas"
+        width="420"
+        height="160"
+        class="mb-3 w-full rounded-lg border border-slate-200 bg-white"
+      ></canvas>
+
+      <div class="space-y-2 font-mono text-xs">
+        <div class="rounded-lg bg-slate-50 p-2.5 leading-5">
+          <p class="font-bold text-slate-700">1. Prism Refraction &amp; Deviation Equations:</p>
+          <p>r₁ + r₂ = A &nbsp;&nbsp;|&nbsp;&nbsp; δ = (i + e) − A</p>
+          <p id="derivMeanLine" class="font-bold text-blue-700">Yellow Ray (589 nm): i = 48°, e = 48.9°, δ = 36.9°</p>
+        </div>
+
+        <div class="rounded-lg bg-slate-50 p-2.5 leading-5">
+          <p class="font-bold text-slate-700">2. Snell's Law at Air–Glass Boundary:</p>
+          <p class="text-slate-600">1 · sin(i) = n(λ) · sin(r₁)</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-200 bg-white px-4 py-4 text-center text-xs text-slate-500">
+    Prism &amp; Dispersion of Light Virtual Lab | Snell's Law Refraction | VIBGYOR Spectrum | Newton's Double-Prism Experiment
+  </footer>
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT RAY-TRACING ENGINE & INTERACTIVE RENDERER                  -->
+  <!-- ===================================================================== -->
+  <script>
+    const canvas = document.getElementById("prismCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const graphCanvas = document.getElementById("cauchyGraphCanvas");
+    const gCtx = graphCanvas.getContext("2d");
+
+    // 7 Spectral Wavelengths (VIBGYOR) with realistic refractive indices per material
+    const SPECTRUM = [
+      { name: "Violet", short: "V", nm: 400, color: "#a855f7", idxOffset: 1.0 },
+      { name: "Indigo", short: "I", nm: 445, color: "#6366f1", idxOffset: 0.78 },
+      { name: "Blue",   short: "B", nm: 475, color: "#3b82f6", idxOffset: 0.62 },
+      { name: "Green",  short: "G", nm: 530, color: "#22c55e", idxOffset: 0.42 },
+      { name: "Yellow", short: "Y", nm: 589, color: "#eab308", idxOffset: 0.26 },
+      { name: "Orange", short: "O", nm: 620, color: "#f97316", idxOffset: 0.14 },
+      { name: "Red",    short: "R", nm: 700, color: "#ef4444", idxOffset: 0.0 },
+    ];
+
+    const MATERIALS = {
+      crown:   { label: "Crown Glass",       nRed: 1.513, nViolet: 1.532 },
+      flint:   { label: "Dense Flint Glass", nRed: 1.644, nViolet: 1.685 },
+      diamond: { label: "Diamond",           nRed: 2.407, nViolet: 2.465 },
+      water:   { label: "Water Prism",       nRed: 1.331, nViolet: 1.344 },
+    };
+
+    const state = {
+      mode: "single",       // 'single' | 'newton'
+      beamType: "white",    // 'white' | 'red' | 'green' | 'violet'
+      material: "crown",
+      incidenceDeg: 48,     // Angle of incidence i (degrees)
+      apexDeg: 60,          // Prism apex angle A (degrees)
+      hitFrac: 0.48,        // Position along left face where ray strikes [0.25 .. 0.75]
+      showNormals: true,
+      showDeviation: true,
+      showScreen: true,
+      draggingTorch: false,
+    };
+
+    // Bind Controls
+    document.getElementById("selectBeamType").addEventListener("change", (e) => {
+      state.beamType = e.target.value;
+      renderAll();
+    });
+
+    document.getElementById("selectMaterial").addEventListener("change", (e) => {
+      state.material = e.target.value;
+      renderAll();
+    });
+
+    document.getElementById("sliderIncidence").addEventListener("input", (e) => {
+      state.incidenceDeg = parseInt(e.target.value, 10);
+      renderAll();
+    });
+
+    document.getElementById("sliderApex").addEventListener("input", (e) => {
+      state.apexDeg = parseInt(e.target.value, 10);
+      renderAll();
+    });
+
+    document.getElementById("chkNormals").addEventListener("change", (e) => {
+      state.showNormals = e.target.checked;
+      renderAll();
+    });
+
+    document.getElementById("chkDeviation").addEventListener("change", (e) => {
+      state.showDeviation = e.target.checked;
+      renderAll();
+    });
+
+    document.getElementById("chkScreen").addEventListener("change", (e) => {
+      state.showScreen = e.target.checked;
+      renderAll();
+    });
+
+    function switchMode(mode) {
+      state.mode = mode;
+      document.querySelectorAll(".mode-btn").forEach((b) => {
+        b.className = "mode-btn rounded-md px-3 py-1.5 text-slate-600 hover:text-slate-900 transition";
+      });
+      document.getElementById(`mode-${mode}`).className =
+        "mode-btn rounded-md bg-blue-600 px-3 py-1.5 text-white shadow-sm transition";
+
+      if (mode === "single") {
+        document.getElementById("simTitle").textContent =
+          "1. Dispersion of White Light Through a Triangular Glass Prism";
+        document.getElementById("simSubtitle").textContent =
+          "Drag the light torch vertically (or adjust Incidence Angle i) to trace exact Snell's Law refraction & VIBGYOR splitting onto the screen";
+      } else {
+        document.getElementById("simTitle").textContent =
+          "2. Isaac Newton's Double-Prism Recombination Experiment";
+        document.getElementById("simSubtitle").textContent =
+          "Prism 1 disperses white light into 7 colors; an identical inverted Prism 2 recombines the spectrum back into a single White Light beam!";
+      }
+      renderAll();
+    }
+
+    // Drag Torch Vertically to Adjust Hit Height / Incidence
+    function getCanvasCoords(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+      const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY,
+      };
+    }
+
+    canvas.addEventListener("pointerdown", (e) => {
+      const pos = getCanvasCoords(e);
+      if (pos.x < 340) {
+        state.draggingTorch = true;
+        canvas.style.cursor = "grabbing";
+        updateTorchFromY(pos.y);
+      }
+    });
+
+    window.addEventListener("pointermove", (e) => {
+      if (!state.draggingTorch) return;
+      const pos = getCanvasCoords(e);
+      updateTorchFromY(pos.y);
+    });
+
+    window.addEventListener("pointerup", () => {
+      if (state.draggingTorch) {
+        state.draggingTorch = false;
+        canvas.style.cursor = "grab";
+      }
+    });
+
+    function updateTorchFromY(mouseY) {
+      // Map vertical drag to incidence angle [20..80 deg]
+      const clampedY = Math.max(80, Math.min(360, mouseY));
+      const newInc = Math.round(20 + ((clampedY - 80) / 280) * 60);
+      state.incidenceDeg = newInc;
+      document.getElementById("sliderIncidence").value = newInc;
+      renderAll();
+    }
+
+    // Exact 2D Ray-Line Intersection Helper
+    function intersectLine(p1, d1, p2, p3) {
+      const v1x = p1.x - p2.x;
+      const v1y = p1.y - p2.y;
+      const v2x = p3.x - p2.x;
+      const v2y = p3.y - p2.y;
+      const v3x = -d1.y;
+      const v3y = d1.x;
+
+      const dot = v2x * v3x + v2y * v3y;
+      if (Math.abs(dot) < 1e-6) return null;
+
+      const t1 = (v2x * v1y - v2y * v1x) / dot;
+      const t2 = (v1x * v3x + v1y * v3y) / dot;
+      if (t1 >= 0 && t2 >= 0 && t2 <= 1) {
+        return { x: p1.x + d1.x * t1, y: p1.y + d1.y * t1, t: t1 };
+      }
+      return null;
+    }
+
+    // Exact 2D Snell's Law Vector Refraction
+    function refractVector(incDir, normal, n1, n2) {
+      const ratio = n1 / n2;
+      const cosI = -(normal.x * incDir.x + normal.y * incDir.y);
+      const sinT2 = ratio * ratio * (1 - cosI * cosI);
+      if (sinT2 > 1.0) {
+        return null; // Total Internal Reflection
+      }
+      const cosT = Math.sqrt(1.0 - sinT2);
+      return {
+        x: ratio * incDir.x + (ratio * cosI - cosT) * normal.x,
+        y: ratio * incDir.y + (ratio * cosI - cosT) * normal.y,
+      };
+    }
+
+    function getRefractiveIndex(spec) {
+      const mat = MATERIALS[state.material];
+      return mat.nRed + spec.idxOffset * (mat.nViolet - mat.nRed);
+    }
+
+    function renderAll() {
+      const { mode, beamType, incidenceDeg, apexDeg, showNormals, showDeviation, showScreen } = state;
+
+      document.getElementById("valIncidence").textContent = `${incidenceDeg}°`;
+      document.getElementById("valApex").textContent = `${apexDeg}°`;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Subtle optical bench grid in dark studio background
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.08)";
+      ctx.lineWidth = 1;
+      for (let gx = 0; gx < canvas.width; gx += 40) {
+        ctx.beginPath();
+        ctx.moveTo(gx, 0);
+        ctx.lineTo(gx, canvas.height);
+        ctx.stroke();
+      }
+      for (let gy = 0; gy < canvas.height; gy += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        ctx.lineTo(canvas.width, gy);
+        ctx.stroke();
+      }
+
+      // 1. Construct Triangular Prism 1 Geometry
+      const apexX = mode === "single" ? 450 : 370;
+      const apexY = 85;
+      const prismHeight = 255;
+      const halfApexRad = ((apexDeg / 2) * Math.PI) / 180;
+      const halfBaseW = Math.tan(halfApexRad) * prismHeight;
+
+      const P_top = { x: apexX, y: apexY };
+      const P_left = { x: apexX - halfBaseW, y: apexY + prismHeight };
+      const P_right = { x: apexX + halfBaseW, y: apexY + prismHeight };
+
+      // Draw Glass Prism 1
+      drawGlassPrism(P_top, P_left, P_right, `A = ${apexDeg}°`);
+
+      // Left face normal pointing outward (up-left)
+      const leftEdgeVec = { x: P_top.x - P_left.x, y: P_top.y - P_left.y };
+      const leftLen = Math.hypot(leftEdgeVec.x, leftEdgeVec.y);
+      const nLeftOut = { x: -leftEdgeVec.y / leftLen, y: leftEdgeVec.x / leftLen };
+
+      // Right face normal pointing outward (up-right)
+      const rightEdgeVec = { x: P_right.x - P_top.x, y: P_right.y - P_top.y };
+      const rightLen = Math.hypot(rightEdgeVec.x, rightEdgeVec.y);
+      const nRightOut = { x: rightEdgeVec.y / rightLen, y: -rightEdgeVec.x / rightLen };
+
+      // Incident strike point on left face
+      const hit1 = {
+        x: P_left.x + (P_top.x - P_left.x) * state.hitFrac,
+        y: P_left.y + (P_top.y - P_left.y) * state.hitFrac,
+      };
+
+      // Incident ray direction from angle i relative to inward normal (-nLeftOut)
+      const nLeftIn = { x: -nLeftOut.x, y: -nLeftOut.y };
+      const normalAngle = Math.atan2(nLeftIn.y, nLeftIn.x);
+      const incRad = (incidenceDeg * Math.PI) / 180;
+      // Ray comes from below-left and bends upward toward normal, so ray angle = normalAngle - incRad
+      const incAngle = normalAngle - incRad;
+      const incDir = { x: Math.cos(incAngle), y: Math.sin(incAngle) };
+
+      // Torch / Laser Source position 210 px upstream
+      const torchPos = {
+        x: hit1.x - incDir.x * 210,
+        y: hit1.y - incDir.y * 210,
+      };
+
+      // Draw Surface Normal N1
+      if (showNormals) {
+        drawDashedNormal(hit1, nLeftOut, 65, "N₁");
+      }
+
+      // Draw Incident Beam from Torch to hit1
+      const incColor =
+        beamType === "white"
+          ? "#ffffff"
+          : beamType === "red"
+          ? "#ef4444"
+          : beamType === "green"
+          ? "#22c55e"
+          : "#a855f7";
+
+      drawGlowRay(torchPos, hit1, incColor, 4.5);
+      drawLightSourceTorch(torchPos, incAngle, beamType);
+
+      // Angle of incidence arc label
+      ctx.fillStyle = "#93c5fd";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(`i = ${incidenceDeg}°`, hit1.x - 24, hit1.y + 18);
+
+      // Projection Screen X coordinate
+      const screenX = mode === "single" ? 965 : 1015;
+      if (showScreen) {
+        drawProjectionScreen(screenX);
+      }
+
+      // Inverted Prism 2 for Newton's Recombination Mode
+      let Q_bottom, Q_left, Q_right, n2LeftOut, n2RightOut;
+      if (mode === "newton") {
+        const p2CenterX = 635;
+        Q_bottom = { x: p2CenterX, y: apexY + prismHeight };
+        Q_left = { x: p2CenterX - halfBaseW, y: apexY };
+        Q_right = { x: p2CenterX + halfBaseW, y: apexY };
+        drawGlassPrism(Q_bottom, Q_left, Q_right, "Inverted Prism 2", true);
+
+        const e2L = { x: Q_left.x - Q_bottom.x, y: Q_left.y - Q_bottom.y };
+        const l2L = Math.hypot(e2L.x, e2L.y);
+        n2LeftOut = { x: e2L.y / l2L, y: -e2L.x / l2L };
+
+        const e2R = { x: Q_bottom.x - Q_right.x, y: Q_bottom.y - Q_right.y };
+        const l2R = Math.hypot(e2R.x, e2R.y);
+        n2RightOut = { x: -e2R.y / l2R, y: e2R.x / l2R };
+      }
+
+      // Filter active rays based on beamType
+      const activeRays =
+        beamType === "white"
+          ? SPECTRUM
+          : SPECTRUM.filter((s) => s.name.toLowerCase() === beamType);
+
+      let anyTIR = false;
+      let devRed = 0;
+      let devViolet = 0;
+      let yellowInfo = null;
+
+      activeRays.forEach((spec) => {
+        const nGlass = getRefractiveIndex(spec);
+
+        // Refraction 1: Air (1.0) -> Glass (nGlass)
+        const dirInside1 = refractVector(incDir, nLeftOut, 1.0, nGlass);
+        if (!dirInside1) return;
+
+        // Intersect with Right Face (P_top -> P_right) or Base (P_left -> P_right)
+        let hit2 = intersectLine(hit1, dirInside1, P_top, P_right);
+        let exitNormal = nRightOut;
+        if (!hit2) {
+          hit2 = intersectLine(hit1, dirInside1, P_left, P_right);
+          exitNormal = { x: 0, y: 1 };
+        }
+        if (!hit2) return;
+
+        // Draw internal dispersed ray inside Prism 1
+        drawGlowRay(hit1, hit2, spec.color, beamType === "white" ? 2.4 : 4);
+
+        if (showNormals && spec.short === "Y") {
+          drawDashedNormal(hit2, exitNormal, 60, "N₂");
+        }
+
+        // Refraction 2: Glass (nGlass) -> Air (1.0)
+        const dirExit1 = refractVector(dirInside1, exitNormal, nGlass, 1.0);
+        if (!dirExit1) {
+          anyTIR = true;
+          // Total internal reflection bounce inside prism
+          const dot = dirInside1.x * exitNormal.x + dirInside1.y * exitNormal.y;
+          const reflDir = {
+            x: dirInside1.x - 2 * dot * exitNormal.x,
+            y: dirInside1.y - 2 * dot * exitNormal.y,
+          };
+          const tirEnd = { x: hit2.x + reflDir.x * 110, y: hit2.y + reflDir.y * 110 };
+          drawGlowRay(hit2, tirEnd, spec.color, 2.2);
+          return;
+        }
+
+        // Calculate deviation angle delta (degrees)
+        const incAng = Math.atan2(incDir.y, incDir.x);
+        const exitAng = Math.atan2(dirExit1.y, dirExit1.x);
+        const deltaDeg = ((exitAng - incAng) * 180) / Math.PI;
+
+        if (spec.short === "R") devRed = deltaDeg;
+        if (spec.short === "V") devViolet = deltaDeg;
+        if (spec.short === "Y") {
+          const cosE = dirExit1.x * exitNormal.x + dirExit1.y * exitNormal.y;
+          const eDeg = (Math.acos(Math.max(-1, Math.min(1, cosE))) * 180) / Math.PI;
+          yellowInfo = { eDeg, deltaDeg };
+        }
+
+        if (mode === "single") {
+          // Trace emergent ray to Screen or canvas edge
+          const endX = showScreen ? screenX : 1110;
+          const tEnd = dirExit1.x > 0.05 ? (endX - hit2.x) / dirExit1.x : 500;
+          const endPt = {
+            x: hit2.x + dirExit1.x * Math.max(0, tEnd),
+            y: hit2.y + dirExit1.y * Math.max(0, tEnd),
+          };
+          drawGlowRay(hit2, endPt, spec.color, beamType === "white" ? 3.2 : 4.5);
+
+          // Draw bright spectrum spot on screen
+          if (showScreen && endPt.y >= 45 && endPt.y <= 375) {
+            ctx.fillStyle = spec.color;
+            ctx.beginPath();
+            ctx.arc(screenX - 3, endPt.y, beamType === "white" ? 4.5 : 6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else {
+          // Mode 2: Newton's Double-Prism Recombination
+          const hit3 = intersectLine(hit2, dirExit1, Q_left, Q_bottom);
+          if (hit3) {
+            drawGlowRay(hit2, hit3, spec.color, 2.8);
+            const dirInside2 = refractVector(dirExit1, n2LeftOut, 1.0, nGlass);
+            if (dirInside2) {
+              const hit4 = intersectLine(hit3, dirInside2, Q_bottom, Q_right);
+              if (hit4) {
+                drawGlowRay(hit3, hit4, spec.color, 2.6);
+                const dirRecombined = refractVector(dirInside2, n2RightOut, nGlass, 1.0);
+                if (dirRecombined) {
+                  const endX = showScreen ? screenX : 1110;
+                  const tEnd = (endX - hit4.x) / Math.max(0.1, dirRecombined.x);
+                  const finalPt = {
+                    x: hit4.x + dirRecombined.x * tEnd,
+                    y: hit4.y + dirRecombined.y * tEnd,
+                  };
+                  // Recombined white light beam!
+                  drawGlowRay(
+                    hit4,
+                    finalPt,
+                    beamType === "white" ? "#ffffff" : spec.color,
+                    beamType === "white" ? 4.5 : 4
+                  );
+                  if (showScreen && finalPt.y >= 45 && finalPt.y <= 375) {
+                    ctx.fillStyle = beamType === "white" ? "#ffffff" : spec.color;
+                    ctx.beginPath();
+                    ctx.arc(screenX - 3, finalPt.y, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Draw Angle of Deviation (delta) Indicator Lines
+      if (showDeviation && !anyTIR) {
+        const undeviatedEnd = {
+          x: hit1.x + incDir.x * 290,
+          y: hit1.y + incDir.y * 290,
+        };
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(hit1.x, hit1.y);
+        ctx.lineTo(undeviatedEnd.x, undeviatedEnd.y);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = "11px sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("Original Ray Path", undeviatedEnd.x + 6, undeviatedEnd.y + 4);
+      }
+
+      updateDashboardMetrics(devRed, devViolet, yellowInfo, anyTIR);
+      renderCauchyGraph();
+    }
+
+    function drawGlassPrism(p1, p2, p3, label, isSecond = false) {
+      ctx.save();
+      const grad = ctx.createLinearGradient(p2.x, p1.y, p3.x, p2.y);
+      grad.addColorStop(0, "rgba(186, 230, 253, 0.24)");
+      grad.addColorStop(0.5, "rgba(125, 211, 252, 0.14)");
+      grad.addColorStop(1, "rgba(56, 189, 248, 0.28)");
+
+      ctx.fillStyle = grad;
+      ctx.strokeStyle = "#7dd3fc";
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = "round";
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#bae6fd";
+      ctx.font = "bold 12px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(label, p1.x, isSecond ? p1.y + 22 : p2.y + 22);
+      ctx.restore();
+    }
+
+    function drawDashedNormal(origin, outNormal, length, label) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.65)";
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(origin.x - outNormal.x * (length * 0.7), origin.y - outNormal.y * (length * 0.7));
+      ctx.lineTo(origin.x + outNormal.x * length, origin.y + outNormal.y * length);
+      ctx.stroke();
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(
+        label,
+        origin.x + outNormal.x * (length + 12),
+        origin.y + outNormal.y * (length + 12)
+      );
+      ctx.restore();
+    }
+
+    function drawGlowRay(p1, p2, color, width) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = width;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawLightSourceTorch(pos, angleRad, beamType) {
+      ctx.save();
+      ctx.translate(pos.x, pos.y);
+      ctx.rotate(angleRad);
+
+      // Torch Body
+      ctx.fillStyle = "#334155";
+      ctx.strokeStyle = "#94a3b8";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-42, -13, 46, 26, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      // Emitter Lens
+      ctx.fillStyle =
+        beamType === "white"
+          ? "#ffffff"
+          : beamType === "red"
+          ? "#ef4444"
+          : beamType === "green"
+          ? "#22c55e"
+          : "#a855f7";
+      ctx.fillRect(2, -10, 6, 20);
+
+      ctx.restore();
+
+      ctx.fillStyle = "#e2e8f0";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("↕ Drag Torch", pos.x, pos.y + 30);
+    }
+
+    function drawProjectionScreen(sx) {
+      ctx.save();
+      ctx.fillStyle = "#f8fafc";
+      ctx.strokeStyle = "#64748b";
+      ctx.lineWidth = 2;
+      ctx.fillRect(sx, 45, 14, 330);
+      ctx.strokeRect(sx, 45, 14, 330);
+
+      ctx.fillStyle = "#cbd5e1";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Screen", sx + 7, 392);
+      ctx.restore();
+    }
+
+    function updateDashboardMetrics(devRed, devViolet, yellowInfo, anyTIR) {
+      const mat = MATERIALS[state.material];
+      const nYellow = mat.nRed + 0.26 * (mat.nViolet - mat.nRed);
+      const dispPower = (mat.nViolet - mat.nRed) / (nYellow - 1);
+
+      document.getElementById("cardNRed").textContent = `n_R = ${mat.nRed.toFixed(3)} (700 nm)`;
+      document.getElementById("cardNViolet").textContent = `n_V = ${mat.nViolet.toFixed(3)} (400 nm)`;
+      document.getElementById("cardDispPower").textContent = dispPower.toFixed(3);
+
+      const badge = document.getElementById("tirWarningBadge");
+
+      if (anyTIR) {
+        document.getElementById("cardDevRed").textContent = "TIR";
+        document.getElementById("cardDevViolet").textContent = "TIR";
+        document.getElementById("cardAngDisp").textContent = "--";
+        document.getElementById("derivMeanLine").textContent =
+          "Total Internal Reflection occurred at second face! Increase Angle of Incidence (i).";
+        badge.className = "rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-900";
+        badge.textContent = "⚠ Total Internal Reflection (TIR): Angle r₂ exceeded Critical Angle! Increase Incidence Angle (i).";
+      } else {
+        document.getElementById("cardDevRed").textContent = `${devRed.toFixed(1)}°`;
+        document.getElementById("cardDevViolet").textContent = `${devViolet.toFixed(1)}°`;
+        const spread = Math.max(0, devViolet - devRed);
+        document.getElementById("cardAngDisp").textContent = `${spread.toFixed(2)}°`;
+
+        if (yellowInfo) {
+          document.getElementById("derivMeanLine").textContent =
+            `Yellow Ray (589 nm): i = ${state.incidenceDeg}°, e = ${yellowInfo.eDeg.toFixed(1)}°, δ = ${yellowInfo.deltaDeg.toFixed(1)}°`;
+        }
+
+        if (state.mode === "newton") {
+          badge.className = "rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-1.5 text-xs font-bold text-blue-900";
+          badge.textContent = "✓ Newton's Recombination: Inverted Prism 2 cancels dispersion and restores White Light!";
+        } else {
+          badge.className = "rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-900";
+          badge.textContent = "✓ Full VIBGYOR Spectrum Projected on Screen (Violet bends most, Red bends least)";
+        }
+      }
+    }
+
+    function renderCauchyGraph() {
+      const w = graphCanvas.width;
+      const h = graphCanvas.height;
+      const padL = 42;
+      const padR = 16;
+      const padT = 16;
+      const padB = 22;
+      const plotW = w - padL - padR;
+      const plotH = h - padT - padB;
+
+      gCtx.clearRect(0, 0, w, h);
+
+      const mat = MATERIALS[state.material];
+      const minN = mat.nRed - 0.005;
+      const maxN = mat.nViolet + 0.005;
+
+      // Grid
+      gCtx.strokeStyle = "#f1f5f9";
+      gCtx.lineWidth = 1;
+      for (let i = 0; i <= 3; i++) {
+        const y = padT + (plotH / 3) * i;
+        gCtx.beginPath();
+        gCtx.moveTo(padL, y);
+        gCtx.lineTo(w - padR, y);
+        gCtx.stroke();
+      }
+
+      // Axes
+      gCtx.strokeStyle = "#94a3b8";
+      gCtx.lineWidth = 1.4;
+      gCtx.beginPath();
+      gCtx.moveTo(padL, padT);
+      gCtx.lineTo(padL, h - padB);
+      gCtx.lineTo(w - padR, h - padB);
+      gCtx.stroke();
+
+      gCtx.fillStyle = "#64748b";
+      gCtx.font = "bold 10px sans-serif";
+      gCtx.textAlign = "right";
+      gCtx.fillText(mat.nViolet.toFixed(3), padL - 5, padT + 8);
+      gCtx.fillText(mat.nRed.toFixed(3), padL - 5, h - padB);
+
+      gCtx.textAlign = "center";
+      gCtx.fillText("Wavelength λ: 400 nm (Violet) → 700 nm (Red)", padL + plotW / 2, h - 5);
+
+      // Cauchy Curve n(lambda)
+      gCtx.strokeStyle = "#2563eb";
+      gCtx.lineWidth = 2.5;
+      gCtx.beginPath();
+      SPECTRUM.forEach((spec, idx) => {
+        const nVal = getRefractiveIndex(spec);
+        const x = padL + ((spec.nm - 400) / 300) * plotW;
+        const y = h - padB - ((nVal - minN) / (maxN - minN)) * plotH;
+        if (idx === 0) gCtx.moveTo(x, y);
+        else gCtx.lineTo(x, y);
+      });
+      gCtx.stroke();
+
+      // Colored VIBGYOR Points along Cauchy Curve
+      SPECTRUM.forEach((spec) => {
+        const nVal = getRefractiveIndex(spec);
+        const x = padL + ((spec.nm - 400) / 300) * plotW;
+        const y = h - padB - ((nVal - minN) / (maxN - minN)) * plotH;
+        gCtx.fillStyle = spec.color;
+        gCtx.beginPath();
+        gCtx.arc(x, y, 4.5, 0, Math.PI * 2);
+        gCtx.fill();
+      });
+    }
+
+    function resetLab() {
+      state.mode = "single";
+      state.beamType = "white";
+      state.material = "crown";
+      state.incidenceDeg = 48;
+      state.apexDeg = 60;
+      state.showNormals = true;
+      state.showDeviation = true;
+      state.showScreen = true;
+
+      document.getElementById("selectBeamType").value = "white";
+      document.getElementById("selectMaterial").value = "crown";
+      document.getElementById("sliderIncidence").value = 48;
+      document.getElementById("sliderApex").value = 60;
+      document.getElementById("chkNormals").checked = true;
+      document.getElementById("chkDeviation").checked = true;
+      document.getElementById("chkScreen").checked = true;
+
+      switchMode("single");
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>
